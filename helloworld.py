@@ -1,4 +1,5 @@
 
+import json
 from flask import Flask, request, make_response,jsonify
 import uuid
 import psycopg2
@@ -24,24 +25,38 @@ def hello_world():
     response.headers["Ce-Source"] = "knative/eventing/samples/hello-world"
     response.headers["Ce-Type"] = "dev.knative.samples.hifromknative"
     try:
-        data = request.get_json()
+        data = request.get_data()
         cursor = conn.cursor()
-        cmd = data['cmd']
+        data_dict = json.loads(data)
+        cmd = data_dict.get('cmd')
         #id = data['id']
         # name = data['name']
         # price = data['price']
         # print(id,name,price)
         if cmd == "POST":
-           cursor.execute('INSERT INTO obj (id, name, price) VALUES (%s, %s, %s);',(data['id'],data['name'],data['price']))
+           # Access nested values
+           value_obj = data_dict.get('value', {})
+           id_value = value_obj.get('id')          # Get the 'id' value
+           name_value = value_obj.get('name')      # Get the 'name' value
+           price_value = value_obj.get('price')    # Get the 'price' value
+           cursor.execute('INSERT INTO obj (id, name, price) VALUES (%s, %s, %s);',(id_value,name_value,price_value))
            conn.commit()
            return response
         elif cmd == "PUT":
+            # Access nested values
+             value_obj = data_dict.get('value', {})
+             id_value = value_obj.get('id')          # Get the 'id' value
+             name_value = value_obj.get('name')      # Get the 'name' value
+             price_value = value_obj.get('price')    # Get the 'price' value
              cursor.execute('UPDATE obj SET name = %s, price = %s WHERE id = %s;',
-                   (data['name'], data['price'], data['id']))
+                   (name_value,price_value, id_value))
              conn.commit()
              return response
         elif cmd == "DELETE":
-             cursor.execute('DELETE FROM obj WHERE id = %s;', (data['id']))
+           # Access nested values
+             value_obj = data_dict.get('value', {})
+             id_value = value_obj.get('id')          # Get the 'id' value
+             cursor.execute('DELETE FROM obj WHERE id = %s;', (id_value))
              conn.commit()
              return response
     except Exception as e:
